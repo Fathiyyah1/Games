@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لعبة كاهوت — أسئلة علمية</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0ea5a1;
+      --accent:#f97316;
+      --muted:#94a3b8;
+      --correct:#10b981;
+      --wrong:#ef4444;
+      font-family: 'Arial', 'Noto Nastaliq', sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#061024);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .app{width:100%;max-width:900px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    header h1{font-size:22px;margin:0}
+    header .meta{color:var(--muted);font-size:14px}
+
+    .title-section{text-align:center;margin-bottom:20px;}
+    .title-section h2{font-size:28px;color:#fff;margin:0 0 10px 0;}
+
+    .card{background:linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));padding:22px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+
+    .question-area{display:flex;gap:18px;align-items:flex-start}
+    .left{flex:1}
+    .right{width:260px}
+
+    .question{font-size:20px;margin-bottom:12px}
+    .progress{height:12px;background:rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;margin-bottom:12px}
+    .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--card),var(--accent));transition:width .4s}
+
+    .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .choice{background:rgba(255,255,255,0.03);padding:14px;border-radius:10px;cursor:pointer;border:2px solid transparent;min-height:56px;display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;}
+    .choice:hover{transform:translateY(-3px)}
+    .choice.correct{background:rgba(16,185,129,0.18);border-color:rgba(16,185,129,0.32)}
+    .choice.wrong{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.28)}
+    .choice.disabled{opacity:0.7;cursor:default}
+
+    .timer{font-size:28px;font-weight:700;text-align:center;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03)}
+    .score{font-size:14px;color:var(--muted);text-align:center}
+
+    .controls{margin-top:16px;display:flex;gap:8px;justify-content:flex-start}
+    .btn{padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+    .btn.next{background:var(--accent);color:#05060a}
+    .btn.reset{background:transparent;border:1px solid rgba(255,255,255,0.07);color:var(--muted)}
+
+    .result{margin-top:18px;padding:14px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));display:none}
+    .result h2{margin:0 0 8px 0}
+    .result .details{color:var(--muted)}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    @media (max-width:700px){
+      .question-area{flex-direction:column}
+      .right{width:100%}
+      .choices{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="title-section">
+      <h2>وحدة التواصل الكتابة</h2>
+    </div>
+
+    <header>
+      <h1>لعبة تشبه كاهوت — اختبر معلوماتك</h1>
+      <div class="meta">الأسئلة: 25 — اسحب لإعادة التشغيل</div>
+    </header>
+
+    <div class="card" id="game">
+      <div class="question-area">
+        <div class="left">
+          <div class="progress" aria-hidden><i id="progressBar"></i></div>
+          <div class="question" id="questionText">جاري التحميل...</div>
+          <div class="choices" id="choices"></div>
+          <div class="controls">
+            <button class="btn reset" id="resetBtn">إعادة</button>
+            <button class="btn next" id="nextBtn" disabled>التالي ›</button>
+          </div>
+        </div>
+        <div class="right">
+          <div class="timer" id="timer">20</div>
+          <div class="score" id="score">النقاط: 0</div>
+        </div>
+      </div>
+
+      <div class="result" id="resultBox">
+        <h2 id="resultTitle">النتيجة</h2>
+        <div class="details" id="resultDetails"></div>
+      </div>
+    </div>
+
+    <footer>تم تطوير الواجهة لتجربة تشبه كاهوت — دعم RTL ونتائج فورية.</footer>
+  </div>
+
+<script>
+const questions = [
+  {
+    question: "أول خطوة في وصف الظاهرة هي:",
+    choices: ["أ. تحديد الأسباب", "ب. تحديد المجال", "ج. تحليل المكونات", "د. بيان الفائدة"],
+    correct: 1
+  },
+  {
+    question: "من الظواهر الاجتماعية:",
+    choices: ["أ. الزلازل", "ب. الكسوف", "ج. البطالة", "د. البركان"],
+    correct: 2
+  },
+  {
+    question: "من الظواهر البيولوجية:",
+    choices: ["أ. الاكتئاب", "ب. الدورة الدموية", "ج. التصحر", "د. الغش"],
+    correct: 1
+  },
+  {
+    question: "أهم نقطتين في وصف التجربة هما:",
+    choices: ["أ. الأسباب والنتائج", "ب. الأدوات والخطوات", "ج. الفرضيات والاستنتاجات", "د. الأسباب والملاحظات"],
+    correct: 1
+  },
+  {
+    question: "وصف نظام الأشياء يعني وصف:",
+    choices: ["أ. الأشخاص", "ب. الأجهزة", "ج. الظواهر", "د. الأماكن"],
+    correct: 1
+  },
+  {
+    question: "العمليات في وصف نظام الأشياء تعني:",
+    choices: ["أ. طرق التشغيل", "ب. المكونات", "ج. القوانين", "د. الفرضيات"],
+    correct: 0
+  },
+  {
+    question: "التعريف في مجال علمي يعني:",
+    choices: ["أ. توضيح النتائج", "ب. تحديد المفهوم", "ج. ذكر الأسباب", "د. وصف الأدوات"],
+    correct: 1
+  },
+  {
+    question: "البرهنة تعني:",
+    choices: ["أ. الجدال", "ب. الشرح", "ج. استخدام الدليل", "د. توجيه السؤال"],
+    correct: 2
+  },
+  {
+    question: "النص الاستدلالي يحتوي على:",
+    choices: ["أ. عنصرين", "ب. ثلاثة عناصر", "ج. أربعة عناصر", "د. عنصر واحد"],
+    correct: 1
+  },
+  {
+    question: "العنصر الأول في النص الاستدلالي هو:",
+    choices: ["أ. الحكم", "ب. القضية", "ج. البرهان", "د. الفكرة العامة"],
+    correct: 1
+  },
+  {
+    question: "البرهان المنطقي يعتمد على:",
+    choices: ["أ. العاطفة", "ب. التجربة", "ج. الاستنتاج العقلي", "د. الملاحظة"],
+    correct: 2
+  },
+  {
+    question: "من مناهج البرهان المنطقي:",
+    choices: ["أ. الوصف", "ب. المقارنة", "ج. الاستقراء", "د. التعريف"],
+    correct: 2
+  },
+  {
+    question: "في منهج المماثلة يتم الحكم بناءً على:",
+    choices: ["أ. مثال مشابه", "ب. قانون ثابت", "ج. تجربة مكررة", "د. ملاحظة جديدة"],
+    correct: 0
+  },
+  {
+    question: "عدد مناهج البرهان المنطقي:",
+    choices: ["أ. اثنان", "ب. ثلاثة", "ج. أربعة", "د. خمسة"],
+    correct: 1
+  },
+  {
+    question: "نتيجة البطالة في أمريكا حسب النص:",
+    choices: ["أ. ازدهار", "ب. مشكلات", "ج. رخاء", "د. استقرار"],
+    correct: 1
+  },
+  {
+    question: "الظواهر الطبيعية مثل الزلازل والبراكين",
+    choices: ["صح", "خطأ"],
+    correct: 0
+  },
+  {
+    question: "وصف التجربة لا يحتاج أدوات",
+    choices: ["صح", "خطأ"],
+    correct: 1
+  },
+  {
+    question: "العمليات هي طرق تشغيل الأجهزة",
+    choices: ["صح", "خطأ"],
+    correct: 0
+  },
+  {
+    question: "التعريف العلمي يهتم بذكر القصص والأمثلة",
+    choices: ["صح", "خطأ"],
+    correct: 1
+  },
+  {
+    question: "البرهنة تعني استخدام الدليل لإثبات الفكرة",
+    choices: ["صح", "خطأ"],
+    correct: 0
+  },
+  {
+    question: "النص الاستدلالي يحتوي على عنصرين فقط",
+    choices: ["صح", "خطأ"],
+    correct: 1
+  },
+  {
+    question: "منهج الاستقراء يبدأ من الجزء إلى الكل",
+    choices: ["صح", "خطأ"],
+    correct: 0
+  },
+  {
+    question: "منهج الاستنتاج يبدأ من الكل إلى الجزء",
+    choices: ["صح", "خطأ"],
+    correct: 0
+  },
+  {
+    question: "منهج المماثلة يعتمد على قانون علمي ثابت",
+    choices: ["صح", "خطأ"],
+    correct: 1
+  },
+  {
+    question: "البطالة تسبب بعض المشكلات في المجتمعات",
+    choices: ["صح", "خطأ"],
+    correct: 0
+  }
+];
+
+let currentQuestionIndex = 0;
+let score = 0;
+let timeLeft = 20;
+let timerInterval = null;
+let selectedAnswer = null;
+let gameStarted = false;
+
+const questionText = document.getElementById('questionText');
+const choicesDiv = document.getElementById('choices');
+const timerDiv = document.getElementById('timer');
+const scoreDiv = document.getElementById('score');
+const nextBtn = document.getElementById('nextBtn');
+const resetBtn = document.getElementById('resetBtn');
+const progressBar = document.getElementById('progressBar');
+const resultBox = document.getElementById('resultBox');
+const resultTitle = document.getElementById('resultTitle');
+const resultDetails = document.getElementById('resultDetails');
+
+function startTimer() {
+  timeLeft = 20;
+  timerDiv.textContent = timeLeft;
+  
+  if (timerInterval) clearInterval(timerInterval);
+  
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerDiv.textContent = timeLeft;
+    
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (selectedAnswer === null) {
+        handleAnswer(-1);
+      }
+    }
+  }, 1000);
+}
+
+function displayQuestion() {
+  if (currentQuestionIndex >= questions.length) {
+    showResults();
+    return;
+  }
+
+  const question = questions[currentQuestionIndex];
+  questionText.textContent = question.question;
+  
+  choicesDiv.innerHTML = '';
+  selectedAnswer = null;
+  nextBtn.disabled = true;
+  
+  question.choices.forEach((choice, index) => {
+    const choiceBtn = document.createElement('div');
+    choiceBtn.className = 'choice';
+    choiceBtn.textContent = choice;
+    choiceBtn.onclick = () => handleAnswer(index);
+    choicesDiv.appendChild(choiceBtn);
+  });
+  
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  progressBar.style.width = progress + '%';
+  
+  startTimer();
+  gameStarted = true;
+}
+
+function handleAnswer(answerIndex) {
+  if (selectedAnswer !== null) return;
+  
+  selectedAnswer = answerIndex;
+  const question = questions[currentQuestionIndex];
+  const choiceButtons = choicesDiv.querySelectorAll('.choice');
+  
+  choiceButtons.forEach((btn, index) => {
+    btn.classList.add('disabled');
+    if (index === question.correct) {
+      btn.classList.add('correct');
+    } else if (index === answerIndex && index !== question.correct) {
+      btn.classList.add('wrong');
+    }
+  });
+  
+  if (answerIndex === question.correct) {
+    score += Math.max(1, timeLeft);
+    scoreDiv.textContent = `النقاط: ${score}`;
+  }
+  
+  clearInterval(timerInterval);
+  nextBtn.disabled = false;
+}
+
+function nextQuestion() {
+  currentQuestionIndex++;
+  displayQuestion();
+}
+
+function resetGame() {
+  currentQuestionIndex = 0;
+  score = 0;
+  selectedAnswer = null;
+  gameStarted = false;
+  clearInterval(timerInterval);
+  resultBox.style.display = 'none';
+  scoreDiv.textContent = 'النقاط: 0';
+  displayQuestion();
+}
+
+function showResults() {
+  clearInterval(timerInterval);
+  questionText.textContent = '';
+  choicesDiv.innerHTML = '';
+  timerDiv.textContent = '';
+  
+  const percentage = Math.round((score / (questions.length * 20)) * 100);
+  resultTitle.textContent = `انتهت اللعبة!`;
+  resultDetails.textContent = `إجمالي النقاط: ${score} من ${questions.length * 20} | النسبة: ${percentage}%`;
+  resultBox.style.display = 'block';
+}
+
+nextBtn.onclick = nextQuestion;
+resetBtn.onclick = resetGame;
+
+// Initialize game
+displayQuestion();
+</script>
+</body>
+</html>
+
